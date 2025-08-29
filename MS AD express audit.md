@@ -106,5 +106,3 @@ For feature requests or bug reports, please create an issue in the project repos
 - MITRE for CVE and CWE knowledge bases
 - Security community for best practices
 ```
-
-This English version maintains all the functionality of the original script while making it accessible to an international audience. The README provides clear instructions and context for English-speaking users of your repository.
