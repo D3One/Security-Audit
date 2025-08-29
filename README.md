@@ -1,5 +1,5 @@
 
-# Security-Audit Toolkit
+# Security Audit Toolkit
 
 ![GitHub](https://img.shields.io/github/license/D3One/Security-Audit)
 ![GitHub last commit](https://img.shields.io/github/last-commit/D3One/Security-Audit)
@@ -7,6 +7,8 @@
 ![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)
 
 A curated collection of personal scripts, code samples, templates, and tools developed and used for conducting security audits across diverse enterprise environments.
+
+<img width="1472" height="1104" alt="image" src="https://github.com/user-attachments/assets/772a5e32-ad18-4066-bf77-b0387f438385" />
 
 ## 📖 Overview
 
