@@ -20,11 +20,15 @@ This repository serves as my personal knowledge base and toolkit, accumulated th
 *   **Network Services:** Active Directory, DNS, DHCP
 *   **Middleware and Applications**
 
+_The tools here are provided as-is to help security professionals, students, and enthusiasts understand common audit procedures and learn how to build their own automation._
+
+- - - 
+
 ## [DFIR Evidence Collection Tool - Windows Dumper](https://github.com/D3One/Security-Audit/blob/main/Windows%20Dumper.md)
 ## [Linux DFIR Evidence Collection Tool](https://github.com/D3One/Security-Audit/blob/main/Linux%20Dumper.md)
 ## [PowerShell Script: Windows Server Security Express Audit Tool](https://github.com/D3One/Security-Audit/blob/main/MS%20AD%20express%20audit.md)
 
-The tools here are provided as-is to help security professionals, students, and enthusiasts understand common audit procedures and learn how to build their own automation.
+- - - 
 
 ## ⚠️ Important Disclaimer & Warning
 
