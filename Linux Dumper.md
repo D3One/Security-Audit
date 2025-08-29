@@ -2,7 +2,9 @@
 
 A Python-based digital forensics and incident response script specifically designed for Linux systems to collect evidence during cybersecurity investigations.
 
-<img width="584" height="286" alt="image" src="https://github.com/user-attachments/assets/30ccdf1b-04ad-4abf-a171-0bc6c56b6791" />
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/30ccdf1b-04ad-4abf-a171-0bc6c56b6791" />
+</p>
 
 ## Features
 
