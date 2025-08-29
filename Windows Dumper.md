@@ -3,6 +3,8 @@
 
 A Python-based digital forensics and incident response script for collecting evidence from compromised systems during cybersecurity investigations.
 
+<img width="1200" height="630" alt="image" src="https://github.com/user-attachments/assets/8cb55893-45cd-4f8a-8d55-c67c59dee79d" />
+
 ## Features
 
 - **System Information Collection**: Gathers comprehensive system data (OS version, users, network config, etc.)
