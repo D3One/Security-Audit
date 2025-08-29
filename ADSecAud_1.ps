@@ -1,0 +1,246 @@
+```powershell
+<#
+.SYNOPSIS
+    Windows Server Security Express Audit Tool
+.DESCRIPTION
+    A PowerShell script for performing a basic express security audit of Windows Servers
+    with roles like Active Directory Domain Controller, DNS, DHCP, and others.
+.VERSION
+    v0.9
+.AUTHOR
+    Ivan Piskunov | White2Hack
+.PURPOSE
+    Educational and research purposes only. The author is not responsible for any
+    damage or misuse of this script.
+.NOTES
+    For educational use only. Ensure you have proper authorization before scanning any systems.
+    Requires PowerShell 5.0+ and administrative privileges for full functionality.
+#>
+
+param(
+    [string]$ComputerName = $env:COMPUTERNAME,
+    [string]$OutputPath = ".\SecurityAuditReports",
+    [string]$Format = "TXT",
+    [switch]$RemoteScan,
+    [PSCredential]$Credential
+)
+
+# Display script disclaimer and information
+Write-Host "================================================" -ForegroundColor Yellow
+Write-Host "Windows Server Security Express Audit Tool v0.9" -ForegroundColor Yellow
+Write-Host "FOR EDUCATIONAL AND RESEARCH PURPOSES ONLY!" -ForegroundColor Red
+Write-Host "Author is not responsible for any misuse or damage." -ForegroundColor Red
+Write-Host "================================================" -ForegroundColor Yellow
+
+# Check for administrative privileges
+if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+    Write-Warning "Administrative privileges are required for a full audit! Some checks may be skipped."
+}
+
+# Initialize report array and progress counters
+$report = @()
+$currentCheck = 0
+$totalChecks = 25  # Total number of security checks to perform
+
+# Function to add an item to the security report
+function Add-ReportItem {
+    param(
+        [string]$Category,
+        [string]$Check,
+        [string]$Status,
+        [string]$RiskLevel,
+        [string]$Description,
+        [string]$Remediation,
+        [string]$Reference
+    )
+    
+    $reportItem = [PSCustomObject]@{
+        Category = $Category
+        Check = $Check
+        Status = $Status
+        RiskLevel = $RiskLevel
+        Description = $Description
+        Remediation = $Remediation
+        Reference = $Reference
+        Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        Computer = $ComputerName
+    }
+    
+    $report += $reportItem
+}
+
+# Function to display progress bar
+function Show-Progress {
+    param([int]$Step)
+    $percentComplete = ($Step / $totalChecks) * 100
+    Write-Progress -Activity "Performing Security Audit" -Status "Check $Step of $totalChecks" -PercentComplete $percentComplete
+}
+
+# Main audit execution block
+try {
+    # 1. Check password policies
+    Show-Progress -Step ($currentCheck++)
+    $passwordPolicy = Get-ADDefaultDomainPasswordPolicy -ErrorAction SilentlyContinue
+    if ($passwordPolicy) {
+        $minPwdLength = $passwordPolicy.MinPasswordLength
+        $status = if ($minPwdLength -ge 8) { "PASS" } else { "FAIL" }
+        Add-ReportItem -Category "Password Policy" -Check "Minimum Password Length" -Status $status `
+            -RiskLevel $(if ($minPwdLength -lt 8) { "High" } else { "Low" }) `
+            -Description "Minimum password length is set to: $minPwdLength" `
+            -Remediation "Set minimum password length to at least 8 characters" `
+            -Reference "MSFT: https://docs.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/minimum-password-length"
+    }
+
+    # 2. Check account lockout policy
+    Show-Progress -Step ($currentCheck++)
+    $lockoutPolicy = Get-ADDefaultDomainPasswordPolicy -ErrorAction SilentlyContinue
+    if ($lockoutPolicy) {
+        $threshold = $lockoutPolicy.LockoutThreshold
+        $status = if ($threshold -le 10 -and $threshold -gt 0) { "PASS" } else { "FAIL" }
+        Add-ReportItem -Category "Account Lockout Policy" -Check "Account Lockout Threshold" -Status $status `
+            -RiskLevel $(if ($threshold -eq 0 -or $threshold -gt 10) { "High" } else { "Low" }) `
+            -Description "Account lockout threshold is set to: $threshold" `
+            -Remediation "Set account lockout threshold between 5 and 10 failed attempts" `
+            -Reference "MSFT: https://docs.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/account-lockout-threshold"
+    }
+
+    # 3. Check for never expiring passwords
+    Show-Progress -Step ($currentCheck++)
+    $neverExpirePasswords = Get-ADUser -Filter {PasswordNeverExpires -eq $true} -Properties PasswordNeverExpires | 
+                           Where-Object { $_.Enabled -eq $true } | 
+                           Select-Object Name, SamAccountName
+    $status = if ($neverExpirePasswords.Count -eq 0) { "PASS" } else { "FAIL" }
+    Add-ReportItem -Category "Password Policy" -Check "Never Expiring Passwords" -Status $status `
+        -RiskLevel $(if ($neverExpirePasswords.Count -gt 0) { "High" } else { "Low" }) `
+        -Description "Found $($neverExpirePasswords.Count) accounts with never expiring passwords" `
+        -Remediation "Disable 'PasswordNeverExpires' option for all accounts, especially privileged ones" `
+        -Reference "CWE-521: https://cwe.mitre.org/data/definitions/521.html"
+
+    # 4. Check for insecure services
+    Show-Progress -Step ($currentCheck++)
+    $insecureServices = Get-Service | Where-Object {
+        $_.StartType -eq "Automatic" -and $_.Status -eq "Running" -and 
+        ($_.Name -like "*remote*" -or $_.Name -like "*telnet*" -or $_.Name -like "*ftp*")
+    }
+    $status = if ($insecureServices.Count -eq 0) { "PASS" } else { "FAIL" }
+    Add-ReportItem -Category "Services" -Check "Insecure Services" -Status $status `
+        -RiskLevel $(if ($insecureServices.Count -gt 0) { "High" } else { "Low" }) `
+        -Description "Found $($insecureServices.Count) potentially insecure services" `
+        -Remediation "Disable or remove unused services, especially legacy protocols" `
+        -Reference "CVE-1999-0524: https://nvd.nist.gov/vuln/detail/CVE-1999-0524"
+
+    # 5. Check Windows Firewall status
+    Show-Progress -Step ($currentCheck++)
+    $firewallStatus = Get-NetFirewallProfile -ErrorAction SilentlyContinue | 
+                     Where-Object { $_.Enabled -eq "False" }
+    $status = if ($firewallStatus.Count -eq 0) { "PASS" } else { "FAIL" }
+    Add-ReportItem -Category "Firewall" -Check "Firewall Status" -Status $status `
+        -RiskLevel $(if ($firewallStatus.Count -gt 0) { "High" } else { "Low" }) `
+        -Description "Found $($firewallStatus.Count) firewall profiles with protection disabled" `
+        -Remediation "Enable firewall for all network profiles" `
+        -Reference "MSFT: https://docs.microsoft.com/en-us/windows/security/threat-protection/windows-firewall/windows-firewall-with-advanced-security"
+
+    # 6. Check system updates
+    Show-Progress -Step ($currentCheck++)
+    $lastUpdate = Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 1
+    $daysSinceUpdate = if ($lastUpdate) { (Get-Date) - $lastUpdate.InstalledOn } else { $null }
+    $status = if ($daysSinceUpdate -and $daysSinceUpdate.Days -le 30) { "PASS" } else { "FAIL" }
+    Add-ReportItem -Category "Updates" -Check "Last System Update" -Status $status `
+        -RiskLevel $(if (-not $daysSinceUpdate -or $daysSinceUpdate.Days -gt 30) { "High" } else { "Low" }) `
+        -Description "Last update installed: $(if ($lastUpdate) {$lastUpdate.InstalledOn} else {'Not found'})" `
+        -Remediation "Install latest security updates and configure automatic updates" `
+        -Reference "MSFT: https://docs.microsoft.com/en-us/windows-server/administration/windows-server-update-services/get-started/windows-server-update-services-wsus"
+
+    # 7. Check audit policies
+    Show-Progress -Step ($currentCheck++)
+    $auditPolicy = auditpol /get /category:* | Where-Object { $_ -like "*Success and Failure*" -or $_ -like "*No Auditing*" }
+    $status = if ($auditPolicy -like "*Success and Failure*") { "PASS" } else { "FAIL" }
+    Add-ReportItem -Category "Audit Policy" -Check "Audit Policy Settings" -Status $status `
+        -RiskLevel $(if (-not $auditPolicy -like "*Success and Failure*") { "Medium" } else { "Low" }) `
+        -Description "Current audit settings: $($auditPolicy -join ', ')" `
+        -Remediation "Configure auditing for both successful and failed logon and access events" `
+        -Reference "MSFT: https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/auditing-overview"
+
+    # 8. Check RDP settings
+    Show-Progress -Step ($currentCheck++)
+    $rdpRegPath = "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server"
+    $rdpRegName = "fDenyTSConnections"
+    $rdpEnabled = (Get-ItemProperty -Path $rdpRegPath -Name $rdpRegName -ErrorAction SilentlyContinue).$rdpRegName -eq 0
+    $status = if (-not $rdpEnabled) { "PASS" } else { "WARNING" }
+    Add-ReportItem -Category "Remote Access" -Check "RDP Enabled" -Status $status `
+        -RiskLevel $(if ($rdpEnabled) { "Medium" } else { "Low" }) `
+        -Description "RDP connection: $(if ($rdpEnabled) {'Enabled'} else {'Disabled'})" `
+        -Remediation "If RDP is not required, disable it. If required, configure Network Level Authentication and restrict access" `
+        -Reference "CVE-2019-0708: https://nvd.nist.gov/vuln/detail/CVE-2019-0708"
+
+    # 9. Check UAC settings
+    Show-Progress -Step ($currentCheck++)
+    $uacEnabled = (Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "EnableLUA" -ErrorAction SilentlyContinue).EnableLUA -eq 1
+    $status = if ($uacEnabled) { "PASS" } else { "FAIL" }
+    Add-ReportItem -Category "User Account Control" -Check "UAC Enabled" -Status $status `
+        -RiskLevel $(if (-not $uacEnabled) { "High" } else { "Low" }) `
+        -Description "User Account Control (UAC): $(if ($uacEnabled) {'Enabled'} else {'Disabled'})" `
+        -Remediation "Enable UAC for enhanced security" `
+        -Reference "MSFT: https://docs.microsoft.com/en-us/windows/security/identity-protection/user-account-control/user-account-control-overview"
+
+    # 10. Check SMB settings
+    Show-Progress -Step ($currentCheck++)
+    $smb1Enabled = Get-WindowsOptionalFeature -Online -FeatureName "SMB1Protocol" -ErrorAction SilentlyContinue | 
+                   Where-Object { $_.State -eq "Enabled" }
+    $status = if (-not $smb1Enabled) { "PASS" } else { "FAIL" }
+    Add-ReportItem -Category "SMB" -Check "SMBv1 Enabled" -Status $status `
+        -RiskLevel $(if ($smb1Enabled) { "High" } else { "Low" }) `
+        -Description "SMBv1: $(if ($smb1Enabled) {'Enabled'} else {'Disabled'})" `
+        -Remediation "Disable SMBv1 due to vulnerabilities (EternalBlue)" `
+        -Reference "CVE-2017-0144: https://nvd.nist.gov/vuln/detail/CVE-2017-0144"
+
+    # Additional checks can be added here...
+
+    # Generate report
+    Write-Progress -Activity "Generating Report" -Status "Completing" -PercentComplete 100
+    
+    # Display results to console
+    Write-Host "`nSecurity Audit Results:" -ForegroundColor Green
+    Write-Host "================================================" -ForegroundColor Green
+    $report | Format-Table Category, Check, Status, RiskLevel -AutoSize
+
+    # Save report to file
+    if (-not (Test-Path $OutputPath)) {
+        New-Item -ItemType Directory -Path $OutputPath -Force | Out-Null
+    }
+    
+    $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+    $fileName = "SecurityAudit_$($ComputerName)_$timestamp"
+    
+    switch ($Format.ToUpper()) {
+        "TXT" {
+            $filePath = Join-Path $OutputPath "$fileName.txt"
+            $report | Format-List | Out-File $filePath -Encoding UTF8
+            Write-Host "Report saved to: $filePath" -ForegroundColor Green
+        }
+        "CSV" {
+            $filePath = Join-Path $OutputPath "$fileName.csv"
+            $report | Export-Csv -Path $filePath -Encoding UTF8 -NoTypeInformation
+            Write-Host "Report saved to: $filePath" -ForegroundColor Green
+        }
+        "HTML" {
+            $filePath = Join-Path $OutputPath "$fileName.html"
+            # Simple HTML conversion
+            $htmlReport = $report | ConvertTo-Html -As Table
+            $htmlReport | Out-File $filePath -Encoding UTF8
+            Write-Host "Report saved to: $filePath" -ForegroundColor Green
+        }
+        default {
+            Write-Warning "Unknown format. Report will be saved as TXT."
+            $filePath = Join-Path $OutputPath "$fileName.txt"
+            $report | Format-List | Out-File $filePath -Encoding UTF8
+            Write-Host "Report saved to: $filePath" -ForegroundColor Green
+        }
+    }
+}
+catch {
+    Write-Error "Error during audit execution: $($_.Exception.Message)"
+}
+```
+
+---
