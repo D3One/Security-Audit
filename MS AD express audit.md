@@ -1,10 +1,14 @@
-## PowerShell Script: Windows Server Security Express Audit Tool
+
 
 # Windows Server Security Express Audit Tool
+
+### PowerShell Script: Windows Server Security Express Audit Tool
 
 ## Description
 
 A PowerShell script designed to perform basic express security audits on Windows Servers with roles like Active Directory Domain Controller, DNS, DHCP, and others. The script checks essential security configurations and generates a structured report with remediation recommendations for identified issues.
+
+<img width="1472" height="1104" alt="image" src="https://github.com/user-attachments/assets/a54cb439-0e45-46cb-8a5a-d1a998e9e49c" />
 
 ## Features
 
