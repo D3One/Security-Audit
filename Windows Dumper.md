@@ -53,10 +53,10 @@ pip install progress
 1. Run with administrative privileges:
 ```bash
 # On Windows
-runas /user:Administrator python dfir_collector.py
+runas /user:Administrator python windumper.py
 
 # On Linux
-sudo python dfir_collector.py
+sudo python windumper.py.py
 ```
 
 2. The script will:
