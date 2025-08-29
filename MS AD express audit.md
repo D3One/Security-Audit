@@ -43,17 +43,17 @@ A PowerShell script designed to perform basic express security audits on Windows
 
 ### Local audit:
 ```powershell
-.\SecurityAudit.ps1
+.\ADSecAud_1.ps
 ```
 
 ### Remote server audit:
 ```powershell
-.\SecurityAudit.ps1 -ComputerName "SERVER01" -RemoteScan
+.\ADSecAud_1.ps -ComputerName "SERVER01" -RemoteScan
 ```
 
 ### Generate report in specific format:
 ```powershell
-.\SecurityAudit.ps1 -Format CSV -OutputPath "C:\AuditReports"
+.\ADSecAud_1.ps -Format CSV -OutputPath "C:\AuditReports"
 ```
 
 ### Available parameters:
